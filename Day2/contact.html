@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Contact Nikhil</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="index.html">Home</a> |
+        <a href="about.html">About</a> |
+        <a href="contact.html">Contact</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>Contact Me</h1>
+      <p>Feel free to reach out through this simple form:</p>
+
+      <form action="#" method="post">
+  <label for="name">Name:</label><br />
+  <input type="text" id="name" name="name" required /><br /><br />
+
+  <label for="email">Email:</label><br />
+  <input type="email" id="email" name="email" required /><br /><br />
+
+  <label>Gender:</label><br />
+  <input type="radio" id="male" name="gender" value="male" />
+  <label for="male">Male</label>
+  <input type="radio" id="female" name="gender" value="female" />
+  <label for="female">Female</label><br /><br />
+
+  <label for="subject">Subject:</label><br />
+  <select id="subject" name="subject">
+    <option value="feedback">Feedback</option>
+    <option value="support">Support</option>
+    <option value="other">Other</option>
+  </select><br /><br />
+
+  <label for="message">Message:</label><br />
+  <textarea id="message" name="message" rows="5" cols="30"></textarea><br /><br />
+
+  <input type="checkbox" id="agree" name="agree" required />
+  <label for="agree">I agree to terms</label><br /><br />
+
+  <button type="submit">Submit</button>
+</form>
+
+    </main>
+
+    <footer>
+      <hr />
+      <p>© 2025 Nikhil Rajput</p>
+    </footer>
+  </body>
+</html>

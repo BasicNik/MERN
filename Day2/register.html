@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Register</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="index.html">Home</a> |
+      <a href="about.html">About</a> |
+      <a href="contact.html">Contact</a> |
+      <a href="register.html">Register</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>User Registration</h1>
+
+    <form action="#" method="post">
+      <label for="fullname">Full Name:</label><br />
+      <input type="text" id="fullname" name="fullname" required /><br /><br />
+
+      <label for="username">Username:</label><br />
+      <input type="text" id="username" name="username" required /><br /><br />
+
+      <label for="email">Email:</label><br />
+      <input type="email" id="email" name="email" required /><br /><br />
+
+      <label for="password">Password:</label><br />
+      <input type="password" id="password" name="password" required /><br /><br />
+
+      <label>Gender:</label><br />
+      <input type="radio" id="male" name="gender" value="male" />
+      <label for="male">Male</label>
+      <input type="radio" id="female" name="gender" value="female" />
+      <label for="female">Female</label><br /><br />
+
+      <label>Hobbies:</label><br />
+      <input type="checkbox" id="reading" name="hobbies" value="reading" />
+      <label for="reading">Reading</label>
+      <input type="checkbox" id="coding" name="hobbies" value="coding" />
+      <label for="coding">Coding</label>
+      <input type="checkbox" id="music" name="hobbies" value="music" />
+      <label for="music">Music</label><br /><br />
+
+      <label for="country">Country:</label><br />
+      <select id="country" name="country">
+        <option value="india">India</option>
+        <option value="usa">USA</option>
+        <option value="uk">UK</option>
+      </select><br /><br />
+
+      <input type="checkbox" id="terms" name="terms" required />
+      <label for="terms">I agree to the terms & conditions</label><br /><br />
+
+      <button type="submit">Register</button>
+      <button type="reset">Reset</button>
+    </form>
+  </main>
+
+  <footer>
+    <hr />
+    <p>© 2025 Nikhil Rajput</p>
+  </footer>
+</body>
+</html>
