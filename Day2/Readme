@@ -1,0 +1,222 @@
+package com.tcs.sbi.swift.helper;
+
+import org.bouncycastle.asn1.cms.ContentInfo;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaCertStore;
+import org.bouncycastle.cms.CMSAlgorithm;
+import org.bouncycastle.cms.CMSEnvelopedData;
+import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
+import org.bouncycastle.cms.CMSException;
+import org.bouncycastle.cms.CMSProcessable;
+import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.CMSTypedData;
+import org.bouncycastle.cms.KeyTransRecipientInformation;
+import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.cms.SignerInformationStore;
+import org.bouncycastle.cms.jcajce.*;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import org.bouncycastle.util.Store;
+import org.bouncycastle.util.encoders.Base64;
+
+import com.cs.eximap.utility.APLog;
+
+import java.io.*;
+import java.nio.charset.Charset;
+import java.security.*;
+import java.security.cert.*;
+import java.util.*;
+
+public class CMSSgnr {
+	static final String DIGEST_SHA1 = "SHA256WithRSA";
+	static final String BC_PROVIDER = "BC";
+
+	/**
+	 * Load keystore from file
+	 *
+	 * @param keyStorePath
+	 * @param keyStoreType
+	 * @param keyPass
+	 * @return
+	 * @throws IOException
+	 * @throws KeyStoreException
+	 * @throws CertificateException
+	 * @throws NoSuchAlgorithmException
+	 * @throws NoSuchProviderException
+	 */
+	public static KeyStore getKeystore(String keyStorePath, String keyStoreType, String keyPass) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException {
+		FileInputStream is = new FileInputStream(keyStorePath);
+		KeyStore keystore = KeyStore.getInstance(keyStoreType);
+		keystore.load(is, keyPass.toCharArray());
+		is.close();
+
+		return keystore;
+	}
+
+	/**
+	 * Envelope data without signing and w/o including certs
+	 * @param ks KeyStore
+	 * @param keyAlias String
+	 * @param dataToEnvelope byte[]
+	 * @return
+	 * @throws Exception
+	 */
+	public static byte[] envelopeData(KeyStore ks, String keyAlias, byte[] dataToEnvelope) throws Exception {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+
+		String alias = ks.aliases().nextElement();
+		X509Certificate cert = (X509Certificate) ks.getCertificate(alias);
+
+		// set up the generator
+		CMSEnvelopedDataGenerator gen = new CMSEnvelopedDataGenerator();
+		gen.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(cert).setProvider(BC_PROVIDER));
+
+		// create the enveloped-data object
+		CMSProcessable data = new CMSProcessableByteArray(dataToEnvelope);
+
+		CMSEnvelopedData enveloped = gen.generate(
+				(CMSTypedData) data,
+				new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC).setProvider(BC_PROVIDER).build());
+		return enveloped.getEncoded();
+	}
+
+	/**
+	 * Extract enveloped data without sign verification
+	 * @param ks
+	 * @param keyStorePass
+	 * @param keyAlias
+	 * @param dataEncrypted
+	 * @return
+	 * @throws CMSException
+	 * @throws UnrecoverableKeyException
+	 * @throws NoSuchAlgorithmException
+	 * @throws KeyStoreException
+	 */
+	public static byte[] extractEnvelopedData(KeyStore ks, String keyStorePass, String keyAlias, byte[] dataEncrypted) throws CMSException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		byte[] contents;
+		CMSEnvelopedData enveloped = new CMSEnvelopedData(dataEncrypted);
+		Collection recip = enveloped.getRecipientInfos().getRecipients();
+		KeyTransRecipientInformation rinfo = (KeyTransRecipientInformation) recip.iterator().next();
+		PrivateKey pKey = (PrivateKey) ks.getKey(keyAlias, keyStorePass.toCharArray());
+		contents = rinfo.getContent(new JceKeyTransEnvelopedRecipient(pKey).setProvider(BC_PROVIDER));
+		return contents;
+	}
+
+	/**
+	 * Sign and envelope data include sign and certificate
+	 *
+	 * @return
+	 * @throws Exception
+	 */
+	public static byte[] signAndEnevelopeData(KeyStore ks, String keyStorePass, byte[] dataToSignAndEnvelope) throws Exception {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+
+		// Get private key and sign
+		String keyAlias = ks.aliases().nextElement();
+		APLog.reportLog("after key alias");
+		PrivateKey pKey = (PrivateKey) ks.getKey(keyAlias, keyStorePass.toCharArray());
+		APLog.reportLog("after private key");
+
+		// Build CMS
+		X509Certificate certFromKeystore = (X509Certificate) ks.getCertificate(keyAlias);
+		APLog.reportLog("after building cms x509");
+		List certList = new ArrayList();
+		CMSTypedData data = new CMSProcessableByteArray(dataToSignAndEnvelope);
+		APLog.reportLog("after CMSProcessable ");
+		certList.add(certFromKeystore);
+		APLog.reportLog("after adding to certList");
+		Store certs = new JcaCertStore(certList);
+		APLog.reportLog("after cert store");
+		CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
+		APLog.reportLog("after CMSSignedDataGenerator");
+		ContentSigner sha1Signer = new JcaContentSignerBuilder(DIGEST_SHA1).setProvider(BC_PROVIDER).build(pKey);
+		APLog.reportLog("after contentSigner");
+		gen.addSignerInfoGenerator(new JcaSignerInfoGeneratorBuilder(new JcaDigestCalculatorProviderBuilder().setProvider(BC_PROVIDER).build()).build(sha1Signer, certFromKeystore));
+		APLog.reportLog("after Adding sign Info");
+		gen.addCertificates(certs);
+		APLog.reportLog("after Adding certificate");
+		CMSSignedData signedData = gen.generate(data, true);
+		APLog.reportLog("after signedData");
+
+		return signedData.getEncoded();
+	}
+
+
+	public static byte[] extractEnvelopedAndSignedData(byte[] signed) throws Exception {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		CMSSignedData s = new CMSSignedData(signed);
+		return (byte[]) s.getSignedContent().getContent();
+	}
+
+
+	/**
+	 * Convert byte[] to S/MIME string
+	 * @param data
+	 * @return
+	 */
+	public static String binaryToSmime(byte[] data) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("-----BEGIN PKCS7-----\n");
+		for (int i = 0; i < data.length; ) {
+			byte[] chunk = Arrays.copyOfRange(data, i, (i + 63));
+			sb.append(new String(chunk));
+			sb.append("\n");
+			i += 63;
+		}
+		sb.append("-----END PKCS7-----");
+		return sb.toString();
+	}
+
+	/**
+	 * Convert S/MIME string to byte[]
+	 * @param smimeString
+	 * @return
+	 */
+	public static byte[] smimeToBinary (String smimeString) {
+		if (smimeString != null && !smimeString.isEmpty()) { //TODO:: Use pcl Utils for this check
+			smimeString = smimeString.replace("-----BEGIN PKCS7-----", "");
+			smimeString = smimeString.replace("-----END PKCS7-----", "");
+			smimeString = smimeString.replace("\n", "");
+			smimeString = smimeString.trim();
+			return Base64.decode(smimeString);
+		} else {
+			return new byte[]{};
+		}
+	}
+
+	/**
+	 *
+	 * @param signed
+	 * @return
+	 * @throws CMSException
+	 * @throws CertificateException
+	 * @throws OperatorCreationException
+	 */
+	public static boolean checkPKCS7Signature(byte[] signed) throws CMSException, CertificateException, OperatorCreationException {
+		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+		CMSSignedData signedData = new CMSSignedData(signed);
+		Store certStore = signedData.getCertificates(); // This is where you access embedded certificates
+		SignerInformationStore signers = signedData.getSignerInfos();
+		Collection c = signers.getSigners();
+		Iterator it = c.iterator();
+		int verified = 0;
+		while (it.hasNext()) {
+			SignerInformation signer = (SignerInformation) it.next();
+			Collection certCollection = certStore.getMatches(signer.getSID());
+
+			Iterator certIt = certCollection.iterator();
+			X509CertificateHolder cert = (X509CertificateHolder) certIt.next();
+
+			if (signer.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider(BC_PROVIDER).build(cert))) {
+				verified++;
+			}
+		}
+
+		return verified > 0;
+	}
+}
