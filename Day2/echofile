@@ -1,0 +1,41 @@
+@echo off
+setlocal enabledelayedexpansion
+
+:: Ask user for JAR file name
+set /p JARFILE=Enter the name of the JAR file (with .jar extension): 
+
+:: Check if file exists
+if not exist "%JARFILE%" (
+    echo File "%JARFILE%" not found!
+    pause
+    exit /b
+)
+
+:: Create output folder
+set OUTPUT_DIR=decompiled
+if exist "%OUTPUT_DIR%" rmdir /s /q "%OUTPUT_DIR%"
+mkdir "%OUTPUT_DIR%"
+
+:: Decompile the JAR using CFR
+echo Decompiling %JARFILE% ...
+java -jar cfr.jar "%JARFILE%" --outputdir "%OUTPUT_DIR%"
+
+if errorlevel 1 (
+    echo Decompilation failed!
+    pause
+    exit /b
+)
+
+:: Combine all .java files into Combined.java
+echo Combining all .java files into Combined.java ...
+cd "%OUTPUT_DIR%"
+if exist Combined.java del Combined.java
+
+for /r %%f in (*.java) do (
+    echo.>>"Combined.java"
+    echo // ===== File: %%f ===== >>"Combined.java"
+    type "%%f" >>"Combined.java"
+)
+
+echo Done. Combined file saved as: %OUTPUT_DIR%\Combined.java
+pause
