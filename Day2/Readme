@@ -1,222 +1,457 @@
-package com.tcs.sbi.swift.helper;
 
-import org.bouncycastle.asn1.cms.ContentInfo;
-import org.bouncycastle.cert.X509CertificateHolder;
+// ===== File: D:\Nikhil Rajput\Changes\2025-08-04\decompiled\com\tcs\factory\SecurityWrapper.java ===== 
+/*
+ * Decompiled with CFR 0.151.
+ */
+package com.tcs.factory;
+
+import com.tcs.swift.SecurityHandler;
+import com.tcs.util.ConfigException;
+import com.tcs.util.SecurityWrapperException;
+
+public class SecurityWrapper
+extends SecurityHandler {
+    public SecurityWrapper(String var1) throws SecurityWrapperException, ConfigException {
+        super(var1);
+    }
+
+    @Override
+    public String encrypt(String var1) throws SecurityWrapperException {
+        return super.encrypt(var1);
+    }
+
+    @Override
+    public String decrypt(String var1) throws SecurityWrapperException {
+        return super.decrypt(var1);
+    }
+}
+
+.
+// ===== File: D:\Nikhil Rajput\Changes\2025-08-04\decompiled\com\tcs\security\NewSecurityManager.java ===== 
+/*
+ * Decompiled with CFR 0.151.
+ * 
+ * Could not load the following classes:
+ *  org.bouncycastle.asn1.ASN1Encodable
+ *  org.bouncycastle.asn1.ASN1EncodableVector
+ *  org.bouncycastle.asn1.cms.AttributeTable
+ *  org.bouncycastle.asn1.smime.SMIMECapabilitiesAttribute
+ *  org.bouncycastle.asn1.smime.SMIMECapability
+ *  org.bouncycastle.asn1.smime.SMIMECapabilityVector
+ *  org.bouncycastle.cert.jcajce.JcaCertStore
+ *  org.bouncycastle.cms.CMSException
+ *  org.bouncycastle.cms.CMSProcessableByteArray
+ *  org.bouncycastle.cms.CMSSignedData
+ *  org.bouncycastle.cms.CMSSignedDataGenerator
+ *  org.bouncycastle.cms.CMSTypedData
+ *  org.bouncycastle.cms.SignerInformation
+ *  org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoGeneratorBuilder
+ *  org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder
+ *  org.bouncycastle.jce.provider.BouncyCastleProvider
+ *  org.bouncycastle.operator.OperatorCreationException
+ *  org.bouncycastle.util.Selector
+ *  org.bouncycastle.util.Store
+ *  org.bouncycastle.util.encoders.Base64
+ */
+package com.tcs.security;
+
+import com.tcs.util.ConfigException;
+import com.tcs.util.ConfigReader;
+import com.tcs.util.PasswordEncryptor;
+import com.tcs.util.SecurityWrapperException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.Security;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.cms.AttributeTable;
+import org.bouncycastle.asn1.smime.SMIMECapabilitiesAttribute;
+import org.bouncycastle.asn1.smime.SMIMECapability;
+import org.bouncycastle.asn1.smime.SMIMECapabilityVector;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
-import org.bouncycastle.cms.CMSAlgorithm;
-import org.bouncycastle.cms.CMSEnvelopedData;
-import org.bouncycastle.cms.CMSEnvelopedDataGenerator;
 import org.bouncycastle.cms.CMSException;
-import org.bouncycastle.cms.CMSProcessable;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.cms.CMSTypedData;
-import org.bouncycastle.cms.KeyTransRecipientInformation;
 import org.bouncycastle.cms.SignerInformation;
-import org.bouncycastle.cms.SignerInformationStore;
-import org.bouncycastle.cms.jcajce.*;
-import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoGeneratorBuilder;
+import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+import org.bouncycastle.util.Selector;
 import org.bouncycastle.util.Store;
 import org.bouncycastle.util.encoders.Base64;
 
-import com.cs.eximap.utility.APLog;
+public final class NewSecurityManager {
+    static final String DIGEST_SHA1 = "SHA256WithRSA";
+    static final String BC_PROVIDER = "BC";
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.security.*;
-import java.security.cert.*;
-import java.util.*;
+    public static String signData(String data) throws SecurityWrapperException, ConfigException {
+        if (new File(ConfigReader.getInstance().getProperty("SOURCE_PFX_FILE")).exists()) {
+            String password = NewSecurityManager.decryptPassword(ConfigReader.getInstance().getProperty("PASSWORD"));
+            String pfxFile = ConfigReader.getInstance().getProperty("SOURCE_PFX_FILE");
+            char[] passwordChars = password.toCharArray();
+            try {
+                try {
+                    FileInputStream fis = new FileInputStream(pfxFile);
+                    KeyStore ks = KeyStore.getInstance("pkcs12");
+                    ks.load(fis, passwordChars);
+                    Security.addProvider((Provider)new BouncyCastleProvider());
+                    String keyAlias = ks.aliases().nextElement();
+                    PrivateKey privateKey = (PrivateKey)ks.getKey(keyAlias, passwordChars);
+                    X509Certificate certFromKeystore = (X509Certificate)ks.getCertificate(keyAlias);
+                    ArrayList<X509Certificate> certList = new ArrayList<X509Certificate>();
+                    CMSProcessableByteArray cmsData = new CMSProcessableByteArray(data.getBytes());
+                    certList.add(certFromKeystore);
+                    JcaCertStore certs = new JcaCertStore(certList);
+                    ASN1EncodableVector signedAttrs = new ASN1EncodableVector();
+                    SMIMECapabilityVector caps = new SMIMECapabilityVector();
+                    caps.addCapability(SMIMECapability.dES_EDE3_CBC);
+                    caps.addCapability(SMIMECapability.rC2_CBC, 128);
+                    caps.addCapability(SMIMECapability.dES_CBC);
+                    signedAttrs.add((ASN1Encodable)new SMIMECapabilitiesAttribute(caps));
+                    JcaSimpleSignerInfoGeneratorBuilder signer_gen = new JcaSimpleSignerInfoGeneratorBuilder();
+                    signer_gen.setProvider(BC_PROVIDER).setSignedAttributeGenerator(new AttributeTable(signedAttrs));
+                    CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
+                    String algo = "SHA256withRSA";
+                    gen.addSignerInfoGenerator(signer_gen.build(algo, privateKey, certFromKeystore));
+                    gen.addCertificates((Store)certs);
+                    CMSSignedData signedData = gen.generate((CMSTypedData)cmsData, false);
+                    byte[] var14 = Base64.encode((byte[])signedData.getEncoded());
+                    data = new String(NewSecurityManager.encodeData(new String(var14)));
+                    data = "-----BEGIN PKCS7-----\n" + data + "\n-----END PKCS7-----";
+                    return data;
+                }
+                catch (CMSException e) {
+                    throw new SecurityWrapperException("302: CMS Bouncy Castle Exception:" + (Object)((Object)e));
+                }
+                catch (KeyStoreException e) {
+                    throw new SecurityWrapperException("303: Unable to access key store :" + e);
+                }
+                catch (NoSuchAlgorithmException e) {
+                    throw new SecurityWrapperException("305: No such algorithm(PKCS) is available in provided environment:" + e);
+                }
+                catch (CertificateException e) {
+                    throw new SecurityWrapperException("306: Invalid or corrupted certificate:" + e);
+                }
+                catch (FileNotFoundException e) {
+                    throw new SecurityWrapperException("307: No certificate found");
+                }
+                catch (IOException e) {
+                    throw new SecurityWrapperException("308: Invalid certificate/ Wrong password");
+                }
+                catch (UnrecoverableKeyException e) {
+                    throw new SecurityWrapperException("309: Error occurred while accessing private key:" + e);
+                }
+            }
+            catch (Exception exception) {}
+        } else {
+            throw new SecurityWrapperException("301: PFX file is not present in the provided path (properties file).");
+        }
+        return data;
+    }
 
-public class CMSSgnr {
-	static final String DIGEST_SHA1 = "SHA256WithRSA";
-	static final String BC_PROVIDER = "BC";
+    private static String decryptPassword(String encryptedPassword) throws SecurityWrapperException {
+        try {
+            return PasswordEncryptor.decrypt(encryptedPassword);
+        }
+        catch (IOException | NullPointerException | GeneralSecurityException e) {
+            throw new SecurityWrapperException("701: Error while decrypting password for key store.");
+        }
+    }
 
-	/**
-	 * Load keystore from file
-	 *
-	 * @param keyStorePath
-	 * @param keyStoreType
-	 * @param keyPass
-	 * @return
-	 * @throws IOException
-	 * @throws KeyStoreException
-	 * @throws CertificateException
-	 * @throws NoSuchAlgorithmException
-	 * @throws NoSuchProviderException
-	 */
-	public static KeyStore getKeystore(String keyStorePath, String keyStoreType, String keyPass) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException {
-		FileInputStream is = new FileInputStream(keyStorePath);
-		KeyStore keystore = KeyStore.getInstance(keyStoreType);
-		keystore.load(is, keyPass.toCharArray());
-		is.close();
+    /*
+     * Unable to fully structure code
+     */
+    public static boolean verifyData(byte[] data, byte[] signature) throws SecurityWrapperException, OperatorCreationException {
+        verified = false;
+        signatureString = new String(signature);
+        if (signatureString.contains("-----BEGIN PKCS7-----") && signatureString.contains("-----END PKCS7-----")) {
+            beginIndex = signatureString.indexOf("-----BEGIN PKCS7-----");
+            if ((signatureString = signatureString.substring(beginIndex, endIndex = signatureString.indexOf("-----END PKCS7-----")).replace("-----BEGIN PKCS7-----", "").replace("-----END PKCS7-----", "")).equals(null) && signatureString.length() <= 0) {
+                throw new SecurityWrapperException("405: Input message does not contain signed data.");
+            }
+            new String(data);
+            signature = Base64.decode((String)signatureString);
+            try {
+                Security.addProvider((Provider)new BouncyCastleProvider());
+                signedData = new CMSSignedData(signature);
+                certStore = signedData.getCertificates();
+                signers = signedData.getSignerInfos();
+                c = signers.getSigners();
+                it = c.iterator();
+                var11 = signedData.getSignerInfos().getSigners().iterator();
+                block2: while (true) {
+                    if (!var11.hasNext()) {
+                        return verified;
+                    }
+                    signerInfo = (SignerInformation)var11.next();
+                    certCollection = certStore.getMatches((Selector)signerInfo.getSID());
+                    if (certCollection.isEmpty()) continue;
+                    var5 = certCollection.iterator();
+                    while (true) {
+                        if (var5.hasNext()) ** break;
+                        continue block2;
+                        cert = (X509Certificate)var5.next();
+                        if (!signerInfo.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert))) continue;
+                        verified = true;
+                    }
+                    break;
+                }
+            }
+            catch (CMSException e) {
+                throw new SecurityWrapperException("401: CMS Bouncy Castle Exception : Signature verification failed:" + (Object)e);
+            }
+        }
+        throw new SecurityWrapperException("406: Input message does not contain signed (BLOCK 5) data.");
+    }
 
-		return keystore;
-	}
+    private static byte[] encodeData(String data) {
+        byte[] encodedData = null;
+        byte[] byteArray = data.getBytes();
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(byteArray);
+        byte[] buffer = new byte[64];
+        byte[] newLine = "\n".getBytes();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            int bytesRead;
+            inputStream.read(buffer);
+            outputStream.write(buffer);
+            while ((bytesRead = inputStream.read(buffer)) > 0) {
+                outputStream.write(newLine);
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            encodedData = outputStream.toByteArray();
+            inputStream.close();
+            outputStream.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return encodedData;
+    }
+}
 
-	/**
-	 * Envelope data without signing and w/o including certs
-	 * @param ks KeyStore
-	 * @param keyAlias String
-	 * @param dataToEnvelope byte[]
-	 * @return
-	 * @throws Exception
-	 */
-	public static byte[] envelopeData(KeyStore ks, String keyAlias, byte[] dataToEnvelope) throws Exception {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+.
+// ===== File: D:\Nikhil Rajput\Changes\2025-08-04\decompiled\com\tcs\security\SecurityManager.java ===== 
+/*
+ * Decompiled with CFR 0.151.
+ * 
+ * Could not load the following classes:
+ *  org.bouncycastle.cert.jcajce.JcaCertStore
+ *  org.bouncycastle.cms.CMSException
+ *  org.bouncycastle.cms.CMSProcessableByteArray
+ *  org.bouncycastle.cms.CMSSignedData
+ *  org.bouncycastle.cms.SignerInformation
+ *  org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder
+ *  org.bouncycastle.jce.provider.BouncyCastleProvider
+ *  org.bouncycastle.operator.OperatorCreationException
+ *  org.bouncycastle.util.Selector
+ *  org.bouncycastle.util.encoders.Base64
+ */
+package com.tcs.security;
 
-		String alias = ks.aliases().nextElement();
-		X509Certificate cert = (X509Certificate) ks.getCertificate(alias);
+import com.tcs.util.ConfigException;
+import com.tcs.util.ConfigReader;
+import com.tcs.util.PasswordEncryptor;
+import com.tcs.util.SecurityWrapperException;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.Security;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import org.bouncycastle.cert.jcajce.JcaCertStore;
+import org.bouncycastle.cms.CMSException;
+import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.util.Selector;
+import org.bouncycastle.util.encoders.Base64;
 
-		// set up the generator
-		CMSEnvelopedDataGenerator gen = new CMSEnvelopedDataGenerator();
-		gen.addRecipientInfoGenerator(new JceKeyTransRecipientInfoGenerator(cert).setProvider(BC_PROVIDER));
+public final class SecurityManager {
+    static final String DIGEST_SHA1 = "SHA256WithRSA";
+    static final String BC_PROVIDER = "BC";
 
-		// create the enveloped-data object
-		CMSProcessable data = new CMSProcessableByteArray(dataToEnvelope);
+    /*
+     * Loose catch block
+     * Enabled aggressive block sorting
+     * Enabled unnecessary exception pruning
+     * Enabled aggressive exception aggregation
+     */
+    public static String signData(String data) throws SecurityWrapperException, ConfigException {
+        if (!new File(ConfigReader.getInstance().getProperty("SOURCE_PFX_FILE")).exists()) {
+            throw new SecurityWrapperException("301: PFX file is not present in the provided path (properties file).");
+        }
+        String password = SecurityManager.decryptPassword(ConfigReader.getInstance().getProperty("PASSWORD"));
+        String pfxFile = ConfigReader.getInstance().getProperty("SOURCE_PFX_FILE");
+        char[] passwordChars = password.toCharArray();
+        try {
+            Provider[] providers;
+            FileInputStream fis = new FileInputStream(pfxFile);
+            KeyStore ks = KeyStore.getInstance("PKCS12");
+            ks.load(fis, passwordChars);
+            Security.addProvider((Provider)new BouncyCastleProvider());
+            String keyAlias = ks.aliases().nextElement();
+            PrivateKey privateKey = (PrivateKey)ks.getKey(keyAlias, passwordChars);
+            X509Certificate certFromKeystore = (X509Certificate)ks.getCertificate(keyAlias);
+            ArrayList<X509Certificate> certList = new ArrayList<X509Certificate>();
+            CMSProcessableByteArray cmsData = new CMSProcessableByteArray(data.getBytes());
+            certList.add(certFromKeystore);
+            JcaCertStore certs = new JcaCertStore(certList);
+            Provider BC = null;
+            Provider[] providerArray = providers = Security.getProviders();
+            int n = providers.length;
+            int n2 = 0;
+            while (true) {
+                if (n2 >= n) {
+                    return "-----BEGIN PKCS7-----\n" + data + "\n-----END PKCS7-----";
+                }
+                Provider provider = providerArray[n2];
+                System.out.println("Provider: " + provider.getName() + " - " + provider.getInfo());
+                if (provider.getName().equalsIgnoreCase(BC_PROVIDER)) {
+                    BC = provider;
+                    Security.addProvider(BC);
+                }
+                ++n2;
+            }
+        }
+        catch (KeyStoreException e) {
+            try {
+                throw new SecurityWrapperException("303: Unable to access key store :" + e);
+                catch (NoSuchAlgorithmException e2) {
+                    throw new SecurityWrapperException("305: No such algorithm(PKCS) is available in provided environment:" + e2);
+                }
+                catch (CertificateException e3) {
+                    throw new SecurityWrapperException("306: Invalid or corrupted certificate:" + e3);
+                }
+                catch (FileNotFoundException e4) {
+                    throw new SecurityWrapperException("307: No certificate found");
+                }
+                catch (IOException e5) {
+                    throw new SecurityWrapperException("308: Invalid certificate/ Wrong password");
+                }
+                catch (UnrecoverableKeyException e6) {
+                    throw new SecurityWrapperException("309: Error occurred while accessing private key:" + e6);
+                }
+                catch (Exception e7) {
+                    e7.printStackTrace();
+                    throw new SecurityWrapperException("309: Error occurred while accessing private key:" + e7);
+                }
+            }
+            catch (Exception e8) {
+                e8.printStackTrace();
+                throw new SecurityWrapperException("309: Error occurred while accessing private key:" + e8);
+            }
+        }
+    }
 
-		CMSEnvelopedData enveloped = gen.generate(
-				(CMSTypedData) data,
-				new JceCMSContentEncryptorBuilder(CMSAlgorithm.AES256_CBC).setProvider(BC_PROVIDER).build());
-		return enveloped.getEncoded();
-	}
+    private static String decryptPassword(String encryptedPassword) throws SecurityWrapperException {
+        try {
+            return PasswordEncryptor.decrypt(encryptedPassword);
+        }
+        catch (IOException | NullPointerException | GeneralSecurityException e) {
+            throw new SecurityWrapperException("701: Error while decrypting password for key store.");
+        }
+    }
 
-	/**
-	 * Extract enveloped data without sign verification
-	 * @param ks
-	 * @param keyStorePass
-	 * @param keyAlias
-	 * @param dataEncrypted
-	 * @return
-	 * @throws CMSException
-	 * @throws UnrecoverableKeyException
-	 * @throws NoSuchAlgorithmException
-	 * @throws KeyStoreException
-	 */
-	public static byte[] extractEnvelopedData(KeyStore ks, String keyStorePass, String keyAlias, byte[] dataEncrypted) throws CMSException, UnrecoverableKeyException, NoSuchAlgorithmException, KeyStoreException {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-		byte[] contents;
-		CMSEnvelopedData enveloped = new CMSEnvelopedData(dataEncrypted);
-		Collection recip = enveloped.getRecipientInfos().getRecipients();
-		KeyTransRecipientInformation rinfo = (KeyTransRecipientInformation) recip.iterator().next();
-		PrivateKey pKey = (PrivateKey) ks.getKey(keyAlias, keyStorePass.toCharArray());
-		contents = rinfo.getContent(new JceKeyTransEnvelopedRecipient(pKey).setProvider(BC_PROVIDER));
-		return contents;
-	}
+    /*
+     * Unable to fully structure code
+     */
+    public static boolean verifyData(byte[] data, byte[] signature) throws SecurityWrapperException, OperatorCreationException {
+        verified = false;
+        signatureString = new String(signature);
+        if (signatureString.contains("-----BEGIN PKCS7-----") && signatureString.contains("-----END PKCS7-----")) {
+            beginIndex = signatureString.indexOf("-----BEGIN PKCS7-----");
+            if ((signatureString = signatureString.substring(beginIndex, endIndex = signatureString.indexOf("-----END PKCS7-----")).replace("-----BEGIN PKCS7-----", "").replace("-----END PKCS7-----", "")).equals(null) && signatureString.length() <= 0) {
+                throw new SecurityWrapperException("405: Input message does not contain signed data.");
+            }
+            new String(data);
+            signature = Base64.decode((String)signatureString);
+            try {
+                Security.addProvider((Provider)new BouncyCastleProvider());
+                signedData = new CMSSignedData(signature);
+                certStore = signedData.getCertificates();
+                signers = signedData.getSignerInfos();
+                c = signers.getSigners();
+                it = c.iterator();
+                var11 = signedData.getSignerInfos().getSigners().iterator();
+                block2: while (true) {
+                    if (!var11.hasNext()) {
+                        return verified;
+                    }
+                    signerInfo = (SignerInformation)var11.next();
+                    certCollection = certStore.getMatches((Selector)signerInfo.getSID());
+                    if (certCollection.isEmpty()) continue;
+                    var5 = certCollection.iterator();
+                    while (true) {
+                        if (var5.hasNext()) ** break;
+                        continue block2;
+                        cert = (X509Certificate)var5.next();
+                        if (!signerInfo.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(cert))) continue;
+                        verified = true;
+                    }
+                    break;
+                }
+            }
+            catch (CMSException e) {
+                throw new SecurityWrapperException("401: CMS Bouncy Castle Exception : Signature verification failed:" + (Object)e);
+            }
+        }
+        throw new SecurityWrapperException("406: Input message does not contain signed (BLOCK 5) data.");
+    }
 
-	/**
-	 * Sign and envelope data include sign and certificate
-	 *
-	 * @return
-	 * @throws Exception
-	 */
-	public static byte[] signAndEnevelopeData(KeyStore ks, String keyStorePass, byte[] dataToSignAndEnvelope) throws Exception {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-
-		// Get private key and sign
-		String keyAlias = ks.aliases().nextElement();
-		APLog.reportLog("after key alias");
-		PrivateKey pKey = (PrivateKey) ks.getKey(keyAlias, keyStorePass.toCharArray());
-		APLog.reportLog("after private key");
-
-		// Build CMS
-		X509Certificate certFromKeystore = (X509Certificate) ks.getCertificate(keyAlias);
-		APLog.reportLog("after building cms x509");
-		List certList = new ArrayList();
-		CMSTypedData data = new CMSProcessableByteArray(dataToSignAndEnvelope);
-		APLog.reportLog("after CMSProcessable ");
-		certList.add(certFromKeystore);
-		APLog.reportLog("after adding to certList");
-		Store certs = new JcaCertStore(certList);
-		APLog.reportLog("after cert store");
-		CMSSignedDataGenerator gen = new CMSSignedDataGenerator();
-		APLog.reportLog("after CMSSignedDataGenerator");
-		ContentSigner sha1Signer = new JcaContentSignerBuilder(DIGEST_SHA1).setProvider(BC_PROVIDER).build(pKey);
-		APLog.reportLog("after contentSigner");
-		gen.addSignerInfoGenerator(new JcaSignerInfoGeneratorBuilder(new JcaDigestCalculatorProviderBuilder().setProvider(BC_PROVIDER).build()).build(sha1Signer, certFromKeystore));
-		APLog.reportLog("after Adding sign Info");
-		gen.addCertificates(certs);
-		APLog.reportLog("after Adding certificate");
-		CMSSignedData signedData = gen.generate(data, true);
-		APLog.reportLog("after signedData");
-
-		return signedData.getEncoded();
-	}
-
-
-	public static byte[] extractEnvelopedAndSignedData(byte[] signed) throws Exception {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-		CMSSignedData s = new CMSSignedData(signed);
-		return (byte[]) s.getSignedContent().getContent();
-	}
-
-
-	/**
-	 * Convert byte[] to S/MIME string
-	 * @param data
-	 * @return
-	 */
-	public static String binaryToSmime(byte[] data) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("-----BEGIN PKCS7-----\n");
-		for (int i = 0; i < data.length; ) {
-			byte[] chunk = Arrays.copyOfRange(data, i, (i + 63));
-			sb.append(new String(chunk));
-			sb.append("\n");
-			i += 63;
-		}
-		sb.append("-----END PKCS7-----");
-		return sb.toString();
-	}
-
-	/**
-	 * Convert S/MIME string to byte[]
-	 * @param smimeString
-	 * @return
-	 */
-	public static byte[] smimeToBinary (String smimeString) {
-		if (smimeString != null && !smimeString.isEmpty()) { //TODO:: Use pcl Utils for this check
-			smimeString = smimeString.replace("-----BEGIN PKCS7-----", "");
-			smimeString = smimeString.replace("-----END PKCS7-----", "");
-			smimeString = smimeString.replace("\n", "");
-			smimeString = smimeString.trim();
-			return Base64.decode(smimeString);
-		} else {
-			return new byte[]{};
-		}
-	}
-
-	/**
-	 *
-	 * @param signed
-	 * @return
-	 * @throws CMSException
-	 * @throws CertificateException
-	 * @throws OperatorCreationException
-	 */
-	public static boolean checkPKCS7Signature(byte[] signed) throws CMSException, CertificateException, OperatorCreationException {
-		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-		CMSSignedData signedData = new CMSSignedData(signed);
-		Store certStore = signedData.getCertificates(); // This is where you access embedded certificates
-		SignerInformationStore signers = signedData.getSignerInfos();
-		Collection c = signers.getSigners();
-		Iterator it = c.iterator();
-		int verified = 0;
-		while (it.hasNext()) {
-			SignerInformation signer = (SignerInformation) it.next();
-			Collection certCollection = certStore.getMatches(signer.getSID());
-
-			Iterator certIt = certCollection.iterator();
-			X509CertificateHolder cert = (X509CertificateHolder) certIt.next();
-
-			if (signer.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider(BC_PROVIDER).build(cert))) {
-				verified++;
-			}
-		}
-
-		return verified > 0;
-	}
+    private static byte[] encodeData(String data) {
+        byte[] encodedData = null;
+        byte[] byteArray = data.getBytes();
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(byteArray);
+        byte[] buffer = new byte[64];
+        byte[] newLine = "\n".getBytes();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            int bytesRead;
+            inputStream.read(buffer);
+            outputStream.write(buffer);
+            while ((bytesRead = inputStream.read(buffer)) > 0) {
+                outputStream.write(newLine);
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            encodedData = outputStream.toByteArray();
+            inputStream.close();
+            outputStream.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return encodedData;
+    }
 }
