@@ -1,0 +1,26 @@
+@echo off
+setlocal enabledelayedexpansion
+
+echo ============================
+echo Java Compilation Script
+echo ============================
+
+:: Prompt for library path
+set /p LIBPATH=Enter path to your libraries (e.g. libs):
+
+:: Prompt for Java source file
+set /p SOURCE=Enter path to your .java file (e.g. com\swiftmessage\dao\PerformOperation.java):
+
+:: Set javac path (adjust if needed)
+set "JAVAC=C:\Program Files (x86)\Java\jdk1.8.0_181\bin\javac.exe"
+
+:: Compile
+"%JAVAC%" -cp "%LIBPATH%\*" "%SOURCE%"
+
+if %ERRORLEVEL% NEQ 0 (
+    echo ❌ Compilation failed.
+) else (
+    echo ✅ Compilation successful.
+)
+
+pause
