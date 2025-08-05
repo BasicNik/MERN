@@ -4,23 +4,31 @@ setlocal enabledelayedexpansion
 echo ============================
 echo Java Compilation Script
 echo ============================
+echo Make sure:
+echo 1. The 'libs' folder (with JARs) is in the SAME folder as this .bat file.
+echo 2. The .java file you want to compile is also in the SAME folder or its subfolders.
+echo.
 
-:: Prompt for library path
-set /p LIBPATH=Enter path to your libraries (e.g. libs):
+:: Ask for relative library folder (e.g., libs)
+set /p LIBPATH=Enter relative path to your libraries folder (e.g. libs):
 
-:: Prompt for Java source file
-set /p SOURCE=Enter path to your .java file (e.g. com\swiftmessage\dao\PerformOperation.java):
+:: Ask for Java source file path (e.g., com\swiftmessage\dao\PerformOperation.java)
+set /p SOURCE=Enter relative path to your Java file (e.g. com\swiftmessage\dao\PerformOperation.java):
 
-:: Set javac path (adjust if needed)
+:: Set the javac executable path (adjust if needed)
 set "JAVAC=C:\Program Files (x86)\Java\jdk1.8.0_181\bin\javac.exe"
 
-:: Compile
+:: Compile the Java file
+echo.
+echo Compiling...
 "%JAVAC%" -cp "%LIBPATH%\*" "%SOURCE%"
 
 if %ERRORLEVEL% NEQ 0 (
-    echo ❌ Compilation failed.
+    echo.
+    echo ❌ Compilation failed. Please check your inputs and try again.
 ) else (
-    echo ✅ Compilation successful.
+    echo.
+    echo ✅ Compilation successful!
 )
 
 pause
